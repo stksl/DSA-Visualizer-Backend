@@ -1,0 +1,9 @@
+.dockerignore
+
+**/obj/
+**/bin/
+
+**.sln
+
+# ef core
+**/Migrations/
