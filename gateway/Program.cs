@@ -1,11 +1,13 @@
 using Ocelot.DependencyInjection;
 using static Ocelot.Middleware.OcelotMiddlewareExtensions;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
-namespace BackendGateway;
+namespace Gateway.Service;
 internal class Program
 {
-    public static async Task Main()
+    public static void Main()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.Services.AddRateLimiter(limiter =>
@@ -15,21 +17,34 @@ internal class Program
                 string ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, partition => new FixedWindowRateLimiterOptions()
                 {
-                    Window = TimeSpan.FromSeconds(1),
+                    Window = TimeSpan.FromSeconds(10),
                     PermitLimit = 4,
                     QueueLimit = 1,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                 });
             });
         });
+        builder.Services.AddAuthentication().AddCookie(IdentityConstants.BearerScheme);
+
+        builder.Services.AddDbContext<ApplicationDbContext>(options => 
+            options.UseNpgsql(builder.Configuration.GetConnectionString("PgsqlConnectionString")));
+
+        builder.Services.AddIdentityCore<User>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddApiEndpoints();
 
         builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
         builder.Services.AddOcelot(builder.Configuration);
 
         WebApplication app = builder.Build();
         app.UseRateLimiter();
-        await app.UseOcelot();
 
+        app.Map("/gateway", async appBuilder => 
+        {
+            await appBuilder.UseOcelot();
+        });
+
+        app.MapIdentityApi<User>();
         app.Run();
 
     }

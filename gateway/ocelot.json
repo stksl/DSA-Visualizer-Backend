@@ -1,16 +1,16 @@
 {
-    "GlobalSettings": {
-        "BaseUrl": "localhost:5091"
+    "GlobalConfiguration": {
+        "BaseUrl": "http://localhost:5091"
     },
     "Routes": [
         {
-            "UpstreamPathTemplate": "/upstream_path",
-            "UpstreamHttpMethod": ["_method1", "_method2"],
+            "UpstreamPathTemplate": "/dsa/{url}",
+            "UpstreamHttpMethod": ["GET", "POST"],
 
-            "DownstreamPathTemplate": "/downstream_path",
+            "DownstreamPathTemplate": "/{url}",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
-                { "Host": "localhost", "Port": 1234 }
+                { "Host": "localhost", "Port": 5190 }
             ]
         }
     ]
