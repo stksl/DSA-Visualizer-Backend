@@ -3,6 +3,9 @@ using static Ocelot.Middleware.OcelotMiddlewareExtensions;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Gateway.Service;
 internal class Program
@@ -10,6 +13,11 @@ internal class Program
     public static void Main()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        if (builder.Environment.IsDevelopment()) 
+        {
+            builder.Services.AddSwaggerGen();
+            builder.Services.AddEndpointsApiExplorer();
+        }
         builder.Services.AddRateLimiter(limiter =>
         {
             limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
@@ -17,14 +25,15 @@ internal class Program
                 string ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
                 return RateLimitPartition.GetFixedWindowLimiter(ip, partition => new FixedWindowRateLimiterOptions()
                 {
-                    Window = TimeSpan.FromSeconds(10),
-                    PermitLimit = 4,
+                    Window = TimeSpan.FromSeconds(1),
+                    PermitLimit = 5,
                     QueueLimit = 1,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                 });
             });
         });
-        builder.Services.AddAuthentication().AddCookie(IdentityConstants.BearerScheme);
+        
+        builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddCookie(IdentityConstants.ApplicationScheme);
 
         builder.Services.AddDbContext<ApplicationDbContext>(options => 
             options.UseNpgsql(builder.Configuration.GetConnectionString("PgsqlConnectionString")));
@@ -38,13 +47,14 @@ internal class Program
 
         WebApplication app = builder.Build();
         app.UseRateLimiter();
-
-        app.Map("/gateway", async appBuilder => 
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        app.Map("/gateway", [Authorize] async (IApplicationBuilder appBuilder) => 
         {
             await appBuilder.UseOcelot();
         });
-
         app.MapIdentityApi<User>();
+
         app.Run();
 
     }

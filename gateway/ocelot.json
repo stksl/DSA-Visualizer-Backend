@@ -5,13 +5,26 @@
     "Routes": [
         {
             "UpstreamPathTemplate": "/dsa/{url}",
-            "UpstreamHttpMethod": ["GET", "POST"],
-
-            "DownstreamPathTemplate": "/{url}",
+            "UpstreamHttpMethod": [
+                "GET",
+                "POST"
+            ],
+            "DownstreamPathTemplate": "/Dsa/{url}",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
-                { "Host": "localhost", "Port": 5190 }
-            ]
+                {
+                    "Host": "localhost",
+                    "Port": 5026
+                }
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Identity.Application",
+                "AllowedScopes": []
+            },
+            "AddHeadersToRequest": {
+                "X-User-ID": "Claims[http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name]",
+                "X-Email": "Claims[http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress]"
+            }
         }
     ]
 }
